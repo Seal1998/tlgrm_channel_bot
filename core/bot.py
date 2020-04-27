@@ -1,11 +1,14 @@
 from queue import Queue
-from core.handlers import Handlers, all_handlers
+from core.handlers import all_handlers
+from core import database as db
 from telegram import Bot as TelegramBot, Update
 from telegram.ext import Dispatcher
 from threading import Thread
 
 class Bot():
     def __init__(self, bot_token):
+        #Инициализация базы данных
+        db.create_tables()
         self.token = bot_token
         self.instance = TelegramBot(self.token)
         self.updates = Queue()

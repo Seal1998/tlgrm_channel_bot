@@ -4,4 +4,5 @@ from sqlalchemy import create_engine
 
 db_engine = create_engine('sqlite:///botdb.sqlite', echo=True)
 Base = declarative_base()
-db_session = sessionmaker(bind=db_engine)
+Session = sessionmaker(bind=db_engine)
+db_session = Session()
