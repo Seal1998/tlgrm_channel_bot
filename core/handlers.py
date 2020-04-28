@@ -15,7 +15,7 @@ def complement(update, context):
     update.message.reply_text("You are awesome!", reply_markup=rating_keyboard())
 
 
-def setchannel(update, context):
+def addchannel(update, context):
     context.user_data['addchannel_query'] = True
     update.message.reply_text("Перешлите сообщение из целевого канала")
 
@@ -25,7 +25,7 @@ def process_text_message(update, context):
     message.delete()
     message.reply_text(text=message.text, reply_markup=post_keyboard())
 
-
+@callback('Удалено')
 def delete(update, context):
     if update.callback_query:
         update.callback_query.message.delete()
@@ -34,15 +34,14 @@ def delete(update, context):
 def store_callback(update, context):
     message = update.callback_query.message #store this!
     
-
-@callback
+@callback('Опубликовано')
 def publish_callback(update, context):
     current_channel_id = db.get_current_channel().channel_id
     context.bot.send_message(chat_id=current_channel_id, text=update.callback_query.message.text, reply_markup=rating_keyboard())
-    delete(update, context)
+    update.callback_query.message.delete()
 
 
-@callback
+@callback('Рейтинг изменен')
 def rating_process_callback(update, context):
     rating = update.callback_query.data.split(':')
     update.callback_query.message.edit_reply_markup(reply_markup=rating_keyboard(up=int(rating[0]), down=int(rating[2])))
@@ -50,7 +49,7 @@ def rating_process_callback(update, context):
 all_handlers = [
     CommandHandler('start', start),
     CommandHandler('complement', complement),
-    CommandHandler('addchannel', setchannel),
+    CommandHandler('addchannel', addchannel),
     MessageHandler(Filters.text, process_text_message),
     CallbackQueryHandler(publish_callback, pattern='publish'),
     CallbackQueryHandler(delete, pattern='delete'),
