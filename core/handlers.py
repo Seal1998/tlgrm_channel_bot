@@ -25,7 +25,7 @@ def process_text_message(update, context):
     message.delete()
     message.reply_text(text=message.text, reply_markup=post_keyboard())
 
-@callback('Удалено')
+@callback
 def delete(update, context):
     if update.callback_query:
         update.callback_query.message.delete()
@@ -34,14 +34,14 @@ def delete(update, context):
 def store_callback(update, context):
     message = update.callback_query.message #store this!
     
-@callback('Опубликовано')
+@callback
 def publish_callback(update, context):
     current_channel_id = db.get_current_channel().channel_id
     context.bot.send_message(chat_id=current_channel_id, text=update.callback_query.message.text, reply_markup=rating_keyboard())
     update.callback_query.message.delete()
 
 
-@callback('Рейтинг изменен')
+@callback(alert='Рейтинг изменен')
 def rating_process_callback(update, context):
     rating = update.callback_query.data.split(':')
     update.callback_query.message.edit_reply_markup(reply_markup=rating_keyboard(up=int(rating[0]), down=int(rating[2])))

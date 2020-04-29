@@ -17,10 +17,13 @@ def check_user_flags(handler_function):
             handler_function(update, context)
     return wrapper
 
-def callback(alert:str=None):
+def callback(func=None, *, alert:str=None):
     def alert_wrapper(callback_function):
         def wrapper(update, context):
             callback_function(update, context)
             update.callback_query.answer(text=alert)
         return wrapper
-    return alert_wrapper
+    if func:
+        return alert_wrapper(func)
+    else:
+        return alert_wrapper
