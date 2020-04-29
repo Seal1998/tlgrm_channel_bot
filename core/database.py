@@ -1,5 +1,6 @@
 from models.engine import Base, db_engine, db_session
 from models.channel import Channel
+from models.post import Post
 
 def add_record(record):
     db_session.add(record)
@@ -16,10 +17,18 @@ def add_channel(ch_id: int):
     else:
         return False
 
+def add_text_post(post: str, post_id: int, store=False):
+    post = Post(channel_id=get_current_channel().id, post_text=post, post_id=post_id)
+    add_record(post)
+
 def get_current_channel():
     current_channel = db_session.query(Channel).filter(Channel.current==True).first()
     if current_channel is None:
         return False
     else:
         return current_channel
+
+def get_all_posts():
+    channel = db_session.query(Channel).filter(Channel.id==get_current_channel().id).first()
+    return channel.posts
     

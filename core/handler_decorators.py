@@ -27,3 +27,13 @@ def callback(func=None, *, alert:str=None):
         return alert_wrapper(func)
     else:
         return alert_wrapper
+
+def delete(handler_function):
+    def wrapper(update, context):
+        handler_function(update, context)
+        if update.callback_query:
+            message = update.callback_query.message
+        else:
+            message = update.message
+        message.delete()
+    return wrapper
