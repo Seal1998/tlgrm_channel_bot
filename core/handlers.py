@@ -5,7 +5,7 @@ from telegram.ext import    CommandHandler, \
 from telegram.ext.filters import Filters
 from core.keyboards import post_keyboard, rating_keyboard
 from core import database as db
-from core.handler_decorators import check_user_flags, callback, delete
+from core.handler_decorators import check_user_flags, callback, delete, add_user
 
 def start(update, context):
     update.message.reply_text("Hi")
@@ -41,24 +41,48 @@ def publish_callback(update, context):
     message = update.callback_query.message
     if message.text:
         db.add_text_post(post=message.text, post_id=message.message_id)
-        context.bot.send_message(chat_id=current_channel_id, text=message.text, reply_markup=rating_keyboard())
+        context.bot.send_message(chat_id=current_channel_id, text=message.text, reply_markup=rating_keyboard(message_id=message.message_id))
 
 
 @callback(alert='Рейтинг изменен')
-def rating_process_callback(update, context):
-    rating = update.callback_query.data.split(':')
-    update.callback_query.message.edit_reply_markup(reply_markup=rating_keyboard(up=int(rating[0]), down=int(rating[2])))
+@add_user
+def rating_process_callback(update, context):#РАБОТА С БАЗОЙ, А НЕ КАЛБЕКАМИ!!!
+    message = update.callback_query.message
+    rating_parts = update.callback_query.data.split(':')
+    rating_action = rating_parts[0]
+    callback_message_id = rating_parts[1]
+    user = update.callback_query.from_user
+    if callback_message_id != message.message_id:#db method!
+        post = db.get_post(callback_message_id)
+        post.post_id = message.message_id
+        db.db_session.commit()
+        debug(f'{callback_message_id} != {message.message_id}\nPOST - {post.post_id}')
+    else:
+        post = db.get_post(message.message_id)
 
-def testallmessages(update, context):# delete this
-    posts = db.get_all_posts()
-    for post in posts:
-        update.message.reply_text(post.post_text, reply_markup=post_keyboard())
+    user = db.get_user(user.id)
+    if rating_action == 'rating_up':
+        if user not in post.upvote_users:
+            post.upvote_users.append(user)
+        else:
+            post.upvote_users.remove(user)
+
+    elif rating_action == 'rating_down':
+        if user not in post.downvote_users:
+            post.downvote_users.append(user)
+        else:
+            post.downvote_users.remove(user)
+    db.db_session.commit()
+    rating_votes = db.get_post_rating(post_record=post)
+    message.edit_reply_markup(reply_markup=rating_keyboard(rating=rating_votes, message_id=message.message_id))
+
+def debug(message):
+    print(f'\n\n******DEBUG*******\n\n{message}\n\n********END OF DEBUG*********\n\n')
 
 all_handlers = [
     CommandHandler('start', start),
     CommandHandler('complement', complement),
     CommandHandler('addchannel', addchannel),
-    CommandHandler('getall', testallmessages),#delete this
     MessageHandler(Filters.text, process_text_message),
     CallbackQueryHandler(publish_callback, pattern='publish'),
     CallbackQueryHandler(delete_message, pattern='delete'),

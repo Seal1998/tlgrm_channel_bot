@@ -37,3 +37,17 @@ def delete(handler_function):
             message = update.message
         message.delete()
     return wrapper
+
+def add_user(handler_function):
+    def wrapper(update, context):
+        if update.callback_query:
+            message = update.callback_query.message
+            user = update.callback_query.from_user
+            chat = message.chat
+            if not db.check_user_exist(user.id) and \
+                    db.get_current_channel():
+                db.add_user(update.callback_query.from_user.id,
+                            update.callback_query.from_user.username,
+                            db.get_channel(message.chat.id).id)
+        handler_function(update, context)
+    return wrapper
