@@ -16,7 +16,6 @@ class Post(Base):
     id = Column(Integer, primary_key=True)
     channel_id = Column(Integer, ForeignKey('channel.id'))
     post_id = Column(Integer)
-    post_text = Column(String(4096))
     channel = relationship('Channel', back_populates='posts')
     upvote_users = relationship('User', secondary=upvote_association_table, back_populates='upvote_posts')
     downvote_users = relationship('User', secondary=downvote_association_table, back_populates='downvote_posts')

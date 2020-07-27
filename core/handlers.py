@@ -1,36 +1,47 @@
 from telegram.ext import    CommandHandler, \
                             MessageHandler, \
-                            CallbackQueryHandler
-
+                            CallbackQueryHandler, \
+                            InlineQueryHandler
 from telegram.ext.filters import Filters
-from core.keyboards import post_keyboard, rating_keyboard
+from telegram.error import BadRequest
+from core.keyboards import post_keyboard, rating_keyboard, activate_channel_keyboard
 from core import database as db
-from core.handler_decorators import check_user_flags, callback, delete, add_user
+from core.handler_decorators import callback, delete, add_user
+import uuid
 
 def start(update, context):
     update.message.reply_text("Hi")
 
+def add_channel(update, context):
+    message = update.message
+    if message is None:
+        return False
+    try:
+        channel_id = update.message.text.split(' ')[1]
+    except:
+        message.reply_text('ID канала не указан')
+    try:
+        new_channel = context.bot.get_chat(channel_id)
+        message.reply_text(new_channel.username)
+    except BadRequest:
+        message.reply_text('Чат не найден')
+    try:
+        admins_id = [member.user.id for member in new_channel.get_administrators()]
+    except:
+        message.reply_text('Похоже, что бот не является администратором канала')
+        return False
+    if context.bot.id in admins_id:
+        if db.add_channel(new_channel.id):
+            message.reply_text(f'Добавлен канал {channel_id}')
 
-def complement(update, context):
-    update.message.reply_text("You are awesome!", reply_markup=rating_keyboard())
-
-
-def addchannel(update, context):
-    context.user_data['addchannel_query'] = True
-    update.message.reply_text("Перешлите сообщение из целевого канала")
-
-@check_user_flags
 @delete
 def process_text_message(update, context):
     message = update.message
     message.reply_text(text=message.text, reply_markup=post_keyboard())
 
-@check_user_flags
 @delete
 def process_photo_message(update, context):
     message = update.message
-    print(len(message.photo), message.photo[0].file_id)
-#    print(message.photo[1].file_id)
     message.reply_photo(photo=message.photo[0], reply_markup=post_keyboard())
 
 @callback
@@ -38,10 +49,6 @@ def process_photo_message(update, context):
 def delete_message(update, context):
     pass
 
-
-def store_callback(update, context):
-    message = update.callback_query.message #store this!
-    
 @callback
 @delete
 def publish_callback(update, context):
@@ -86,7 +93,7 @@ def rating_process_callback(update, context):
                 post.upvote_users.remove(user)
         else:
             post.downvote_users.remove(user)
-#    db.db_session.commit() Работает и без этого?
+    db.db_session.commit()
     rating_votes = db.get_post_rating(post_record=post)
     message.edit_reply_markup(reply_markup=rating_keyboard(rating=rating_votes, message_id=message.message_id))
 
@@ -95,12 +102,10 @@ def debug(message):
 
 all_handlers = [
     CommandHandler('start', start),
-    CommandHandler('complement', complement),
-    CommandHandler('addchannel', addchannel),
+    CommandHandler('add', add_channel),
     MessageHandler(Filters.text, process_text_message),
     MessageHandler(Filters.photo, process_photo_message),
     CallbackQueryHandler(publish_callback, pattern='publish'),
     CallbackQueryHandler(delete_message, pattern='delete'),
-    CallbackQueryHandler(store_callback, pattern='store'),
-    CallbackQueryHandler(rating_process_callback, pattern='.*rating_(up|down).*'),
+    CallbackQueryHandler(rating_process_callback, pattern='.*rating_(up|down).*')
 ]

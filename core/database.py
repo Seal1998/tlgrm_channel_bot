@@ -11,8 +11,8 @@ def create_tables():
     Base.metadata.create_all(db_engine)
 
 def add_channel(ch_id: int):
-    new_channel = Channel(channel_id=ch_id, current=True)
-    if db_session.query(Channel).filter(Channel.channel_id==new_channel.channel_id).first() is None:
+    new_channel = Channel(channel_id=ch_id, current=True)# если канал добавлен первым, то current
+    if db_session.query(Channel).filter(Channel.channel_id==new_channel.channel_id).first() is None:#сначала проверка, потом добавление
         add_record(new_channel)
         return True
     else:
@@ -55,8 +55,8 @@ def get_all_posts():
     channel = db_session.query(Channel).filter(Channel.id==get_current_channel().id).first()
     return channel.posts
     
-def get_user(id: int):
-    user = db_session.query(User).filter(User.user_id==id).first()
+def get_user(id: int, channel_id: int):
+    user = db_session.query(User).filter(User.user_id==id).first()# а если пользователь в нескольких каналах одного бота?
     if user is None:
         return False
     else:
