@@ -4,7 +4,7 @@ from telegram.ext import    CommandHandler, \
                             InlineQueryHandler
 from telegram.ext.filters import Filters
 from telegram.error import BadRequest
-from core.keyboards import post_keyboard, rating_keyboard, activate_channel_keyboard
+from core.keyboards import post_keyboard, rating_keyboard
 from core import database as db
 from core.handler_decorators import callback, delete, add_user
 import uuid
@@ -18,13 +18,16 @@ def add_channel(update, context):
         return False
     try:
         channel_id = update.message.text.split(' ')[1]
+        if 't.me/' in channel_id:
+            channel_id = f'@{channel_id.split("https://t.me/")[1]}' #t.me/tech_mode
     except:
-        message.reply_text('ID канала не указан')
+        message.reply_text('Канал не указан')
     try:
         new_channel = context.bot.get_chat(channel_id)
         message.reply_text(new_channel.username)
     except BadRequest:
         message.reply_text('Чат не найден')
+        return False
     try:
         admins_id = [member.user.id for member in new_channel.get_administrators()]
     except:
@@ -33,6 +36,8 @@ def add_channel(update, context):
     if context.bot.id in admins_id:
         if db.add_channel(new_channel.id):
             message.reply_text(f'Добавлен канал {channel_id}')
+        else:
+            message.reply_text(f'Канал уже добавлен {channel_id}')
 
 @delete
 def process_text_message(update, context):

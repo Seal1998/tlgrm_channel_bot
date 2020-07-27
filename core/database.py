@@ -18,8 +18,8 @@ def add_channel(ch_id: int):
     else:
         return False
 
-def add_text_post(post: str, post_id: int, store=False):
-    post = Post(channel_id=get_current_channel().id, post_text=post, post_id=post_id)
+def add_post(post_id, channel_id, store=False):
+    post = Post(channel_id=get_current_channel().id, post_text=post, post_id=post_id)#переписать
     add_record(post)
 
 def add_user(id: int, name: str, chat: int):
