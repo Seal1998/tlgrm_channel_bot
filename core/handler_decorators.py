@@ -27,10 +27,9 @@ def add_user(handler_function):
             message = update.callback_query.message
             user = update.callback_query.from_user
             chat = message.chat
-            if not db.check_user_exist(user.id) and \
-                    db.get_current_channel():
+            if not db.check_user_exist(user.id, chat.id):
                 db.add_user(update.callback_query.from_user.id,
                             update.callback_query.from_user.username,
-                            db.get_channel(message.chat.id).id)
+                            chat.id)
         handler_function(update, context)
     return wrapper

@@ -27,4 +27,4 @@ class Post(Base):
         return len(self.downvote_users)
 
     def __repr__(self):
-        return self.post_text
+        return self.post_id

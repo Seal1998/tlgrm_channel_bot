@@ -11,6 +11,7 @@ import uuid
 
 def start(update, context):
     update.message.reply_text("Hi")
+    db.add_admin_user(update.message.from_user.id, update.message.from_user.username)
 
 def add_channel(update, context):
     message = update.message
@@ -24,7 +25,6 @@ def add_channel(update, context):
         message.reply_text('Канал не указан')
     try:
         new_channel = context.bot.get_chat(channel_id)
-        message.reply_text(new_channel.username)
     except BadRequest:
         message.reply_text('Чат не найден')
         return False
@@ -57,14 +57,20 @@ def delete_message(update, context):
 @callback
 @delete
 def publish_callback(update, context):
-    current_channel_id = db.get_current_channel().channel_id
-    message = update.callback_query.message
+    query = update.callback_query
+    message = query.message
+    try:
+        current_channel_id = db.get_current_channel(query.from_user.id).channel_id
+    except AttributeError:
+        message.reply_text('Не найден контекст канала')
+        return False
+
     if message.text:
-        db.add_text_post(post=message.text, post_id=message.message_id)
         context.bot.send_message(chat_id=current_channel_id, text=message.text, reply_markup=rating_keyboard(message_id=message.message_id))
+        db.add_post(message.message_id, current_channel_id)
     elif message.photo:
-        db.add_text_post(post='photo', post_id=message.message_id)
         context.bot.send_photo(chat_id=current_channel_id, photo=message.photo[0], reply_markup=rating_keyboard(message_id=message.message_id))
+        db.add_post(message.message_id, current_channel_id)
 
 
 @callback(alert='Рейтинг изменен')
@@ -74,15 +80,12 @@ def rating_process_callback(update, context):
     rating_parts = update.callback_query.data.split(':')
     rating_action = rating_parts[0]
     callback_message_id = rating_parts[1]
-    user = update.callback_query.from_user
+    callback_user = update.callback_query.from_user
+    post = db.get_post(callback_message_id, message.chat.id)
     if callback_message_id != message.message_id:
-        post = db.get_post(callback_message_id)
         post.post_id = message.message_id
         db.db_session.commit()
-    else:
-        post = db.get_post(message.message_id)
-
-    user = db.get_user(user.id)
+    user = db.get_user(callback_user.id, message.chat_id)
     if rating_action == 'rating_up':
         if user not in post.upvote_users:
             post.upvote_users.append(user)
