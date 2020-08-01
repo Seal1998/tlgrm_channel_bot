@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, Boolean, ForeignKey, String
 from sqlalchemy.orm import relationship
-from models.engine import Base
+from models.engine import Base, db_session
 from models.post import upvote_association_table, downvote_association_table
 
 class User(Base):

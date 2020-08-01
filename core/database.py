@@ -11,16 +11,17 @@ def add_record(record):
 def create_tables():
     Base.metadata.create_all(db_engine)
 
-def add_channel(ch_id: int):
-    new_channel = Channel(channel_id=ch_id)
+def add_channel(ch_id: int, ch_title: str, ch_username: str):
+    new_channel = Channel(channel_id=ch_id, channel_title=ch_title, channel_username=ch_username)
     all_channels = db_session.query(Channel).all()
-    if new_channel not in all_channels:
+    if new_channel.channel_id not in [c.channel_id for c in all_channels]:
         add_record(new_channel)
         if len(all_channels) == 0:
             all_admin_users = db_session.query(AdminUser).all()
             for user in all_admin_users:
                 user.current_channel = new_channel
             db_session.commit()
+        db_session.commit()
         return True
     else:
         return False
@@ -44,6 +45,12 @@ def get_channel(id: int):
     else:
         return channel
 
+def get_all_channels():
+    channels = db_session.query(Channel).all()
+    if not len(channels):
+        return False
+    return channels
+
 def get_post(id: int, channel_id: int):
     post = db_session.query(Post).filter(Post.post_id==id).\
                                 filter(Post.channel_id==channel_id).first()
@@ -58,19 +65,25 @@ def get_post_rating(id: int=None, post_record=None):
 
 def get_current_channel(user_id):
     user = db_session.query(AdminUser).filter(AdminUser.user_id==user_id).first()
-    print(user, user_id)
     if user is None or user.current_channel is None:
         return False
     else:
         return user.current_channel
 
-def get_all_posts():
-    channel = db_session.query(Channel).filter(Channel.id==get_current_channel().id).first()
+def get_all_posts(channel_id: int):
+    channel = db_session.query(Channel).filter(Channel.id==channel_id).first()
     return channel.posts
     
 def get_user(id: int, channel_id: int):
     user = db_session.query(User).filter(User.user_id==id).\
                                     filter(User.channel_id==channel_id).first()
+    if user is None:
+        return False
+    else:
+        return user
+
+def get_admin_user(id: int):
+    user = db_session.query(AdminUser).filter(AdminUser.user_id==id).first()
     if user is None:
         return False
     else:

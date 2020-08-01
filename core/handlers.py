@@ -4,7 +4,7 @@ from telegram.ext import    CommandHandler, \
                             InlineQueryHandler
 from telegram.ext.filters import Filters
 from telegram.error import BadRequest
-from core.keyboards import post_keyboard, rating_keyboard
+from core.keyboards import post_keyboard, rating_keyboard, change_channel_context_keyboard
 from core import database as db
 from core.handler_decorators import callback, delete, add_user
 import uuid
@@ -34,7 +34,7 @@ def add_channel(update, context):
         message.reply_text('Похоже, что бот не является администратором канала')
         return False
     if context.bot.id in admins_id:
-        if db.add_channel(new_channel.id):
+        if db.add_channel(new_channel.id, new_channel.title, new_channel.username):
             message.reply_text(f'Добавлен канал {channel_id}')
         else:
             message.reply_text(f'Канал уже добавлен {channel_id}')
@@ -42,7 +42,8 @@ def add_channel(update, context):
 @delete
 def process_text_message(update, context):
     message = update.message
-    message.reply_text(text=message.text, reply_markup=post_keyboard())
+    user = db.get_admin_user(message.from_user.id)
+    message.reply_text(text=message.text, reply_markup=post_keyboard(user.current_channel))
 
 @delete
 def process_photo_message(update, context):
@@ -51,7 +52,7 @@ def process_photo_message(update, context):
 
 @callback
 @delete
-def delete_message(update, context):
+def delete_message_callback(update, context):
     pass
 
 @callback
@@ -59,8 +60,9 @@ def delete_message(update, context):
 def publish_callback(update, context):
     query = update.callback_query
     message = query.message
+    _, publish_to = query.data.split(':')
     try:
-        current_channel_id = db.get_current_channel(query.from_user.id).channel_id
+        current_channel_id = db.get_channel(int(publish_to)).channel_id
     except AttributeError:
         message.reply_text('Не найден контекст канала')
         return False
@@ -72,6 +74,23 @@ def publish_callback(update, context):
         context.bot.send_photo(chat_id=current_channel_id, photo=message.photo[0], reply_markup=rating_keyboard(message_id=message.message_id))
         db.add_post(message.message_id, current_channel_id)
 
+@callback
+def switch_context_callback(update, context, callback={}):
+    query = update.callback_query
+    message = query.message
+    _, callback['switch_to'], callback['back_to'] = update.callback_query.data.split(':')
+    switched_channel = db.get_channel(int(callback['switch_to']))
+    if callback['back_to'] == 'post':
+        message.edit_reply_markup(reply_markup=post_keyboard(switched_channel))
+
+@callback
+def edit_markup_switch_context_callback(update, context):
+    query = update.callback_query
+    message = query.message
+    current_channel = db.get_current_channel(query.from_user.id)
+    channels = [c for c in db.get_all_channels() if c.channel_id != current_channel.channel_id]
+    print(channels)
+    message.edit_reply_markup(reply_markup=change_channel_context_keyboard(channels, current_channel))
 
 @callback(alert='Рейтинг изменен')
 @add_user
@@ -114,6 +133,8 @@ all_handlers = [
     MessageHandler(Filters.text, process_text_message),
     MessageHandler(Filters.photo, process_photo_message),
     CallbackQueryHandler(publish_callback, pattern='publish'),
-    CallbackQueryHandler(delete_message, pattern='delete'),
+    CallbackQueryHandler(delete_message_callback, pattern='delete'),
+    CallbackQueryHandler(edit_markup_switch_context_callback, pattern='context_keyboard'),
+    CallbackQueryHandler(switch_context_callback, pattern='switch_context'),
     CallbackQueryHandler(rating_process_callback, pattern='.*rating_(up|down).*')
 ]
