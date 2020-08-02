@@ -11,7 +11,8 @@ import uuid
 
 def start(update, context):
     update.message.reply_text("Hi")
-    db.add_admin_user(update.message.from_user.id, update.message.from_user.username)
+    db.add_admin_user(update.message.from_user.id, update.message.from_user.username, user_type='admin')
+
 
 def add_channel(update, context):
     message = update.message
@@ -61,18 +62,19 @@ def publish_callback(update, context):
     query = update.callback_query
     message = query.message
     _, publish_to = query.data.split(':')
-    try:
-        current_channel_id = db.get_channel(int(publish_to)).channel_id
-    except AttributeError:
-        message.reply_text('Не найден контекст канала')
+    publish_to = int(publish_to)
+    user = db.get_admin_user(query.from_user.id)
+
+    if not user.channel_allowed(publish_to):
+        message.reply_text('Вы не можете публиковать в этот контекст')
         return False
 
     if message.text:
-        context.bot.send_message(chat_id=current_channel_id, text=message.text, reply_markup=rating_keyboard(message_id=message.message_id))
-        db.add_post(message.message_id, current_channel_id)
+        context.bot.send_message(chat_id=publish_to, text=message.text, reply_markup=rating_keyboard(message_id=message.message_id))
+        db.add_post(message.message_id, publish_to)
     elif message.photo:
-        context.bot.send_photo(chat_id=current_channel_id, photo=message.photo[0], reply_markup=rating_keyboard(message_id=message.message_id))
-        db.add_post(message.message_id, current_channel_id)
+        context.bot.send_photo(chat_id=publish_to, photo=message.photo[0], reply_markup=rating_keyboard(message_id=message.message_id))
+        db.add_post(message.message_id, publish_to)
 
 @callback
 def switch_context_callback(update, context, callback={}):
@@ -87,10 +89,10 @@ def switch_context_callback(update, context, callback={}):
 def edit_markup_switch_context_callback(update, context):
     query = update.callback_query
     message = query.message
-    current_channel = db.get_current_channel(query.from_user.id)
-    channels = [c for c in db.get_all_channels() if c.channel_id != current_channel.channel_id]
-    print(channels)
-    message.edit_reply_markup(reply_markup=change_channel_context_keyboard(channels, current_channel))
+    _, back_to = query.data.split(':')
+    user = db.get_admin_user(query.from_user.id)
+    channels = user.allowed_channels
+    message.edit_reply_markup(reply_markup=change_channel_context_keyboard(channels, back_to))
 
 @callback(alert='Рейтинг изменен')
 @add_user

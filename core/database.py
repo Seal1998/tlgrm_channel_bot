@@ -17,18 +17,28 @@ def add_channel(ch_id: int, ch_title: str, ch_username: str):
     if new_channel.channel_id not in [c.channel_id for c in all_channels]:
         add_record(new_channel)
         if len(all_channels) == 0:
-            all_admin_users = db_session.query(AdminUser).all()
-            for user in all_admin_users:
+            for user in get_all_admin_users():
                 user.current_channel = new_channel
             db_session.commit()
-        db_session.commit()
+        all_full_admin_users = get_all_admin_users()
+        [user.add_allowed_channel(new_channel) for user in all_full_admin_users]
         return True
     else:
         return False
 
-def add_admin_user(id: int, name: str):
-    admin_user = AdminUser(user_id=id, username=name)
-    add_record(admin_user)
+def add_admin_user(user_id: int, name: str, user_type: str, allowed_channels=[]):
+    all_admin_users = get_all_admin_users()
+    if user_id not in [admin.user_id for admin in all_admin_users]:
+        admin_user = AdminUser(user_id=user_id, username=name, user_type=user_type)
+        if user_type == 'admin':
+            all_channels = get_all_channels()
+            if all_channels:
+                admin_user.allowed_channels = all_channels
+                admin_user.current_channel = admin_user.allowed_channels[0]
+        # elif user_type == 'moderator'
+        #     if allowed_channels:
+
+        add_record(admin_user)
 
 def add_post(post_id, channel_id):
     post = Post(channel_id=channel_id, post_id=post_id)
@@ -50,6 +60,10 @@ def get_all_channels():
     if not len(channels):
         return False
     return channels
+
+def get_all_admin_users():
+    admins = db_session.query(AdminUser).all()
+    return admins
 
 def get_post(id: int, channel_id: int):
     post = db_session.query(Post).filter(Post.post_id==id).\

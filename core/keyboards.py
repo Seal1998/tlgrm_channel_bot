@@ -4,7 +4,7 @@ def post_keyboard(channel_to_post):
     button_publish = InlineKeyboardButton(text='🗒️ Опубликовать', callback_data=f'publish:{channel_to_post.channel_id}')
     button_delete = InlineKeyboardButton(text='❌ Удалить', callback_data='delete')
     button_store = InlineKeyboardButton(text='📦 Отложить', callback_data='store')
-    button_switch_context = InlineKeyboardButton(text=f'📚 Контекст | {channel_to_post.channel_username}', callback_data='context_keyboard')
+    button_switch_context = InlineKeyboardButton(text=f'📚 Контекст | {channel_to_post.channel_username}', callback_data='context_keyboard:post')
 
     keyboard = InlineKeyboardMarkup([[button_delete, button_publish],
                                     [button_store, button_switch_context]])
@@ -19,12 +19,10 @@ def rating_keyboard(rating=(0, 0), btype: int=1, message_id: str=None):
     keyboard = InlineKeyboardMarkup([[button_up, button_down]])
     return keyboard
 
-def change_channel_context_keyboard(channels, current_channel, cback_to_button=''):
+def change_channel_context_keyboard(channels, back_to=''):
     switch_channel_keyboard = [
             InlineKeyboardButton(text=f'@{c.channel_username}', 
-                                callback_data=f'switch_context:{c.channel_id}:post')
+                                callback_data=f'switch_context:{c.channel_id}:{back_to}')
             for c in channels
         ]
-    switch_channel_keyboard.append(
-        InlineKeyboardButton(text=f'📌 @{current_channel.channel_username}', callback_data=f'alert:Этот канал уже выбран'))
     return InlineKeyboardMarkup([[btn] for btn in switch_channel_keyboard])
