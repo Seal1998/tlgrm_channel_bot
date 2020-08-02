@@ -4,7 +4,7 @@ def post_keyboard(channel_to_post):
     button_publish = InlineKeyboardButton(text='🗒️ Опубликовать', callback_data=f'publish:{channel_to_post.channel_id}')
     button_delete = InlineKeyboardButton(text='❌ Удалить', callback_data='delete')
     button_store = InlineKeyboardButton(text='📦 Отложить', callback_data='store')
-    button_switch_context = InlineKeyboardButton(text=f'📚 Контекст | {channel_to_post.channel_username}', callback_data='context_keyboard:post')
+    button_switch_context = InlineKeyboardButton(text=f'📚 Контекст | @{channel_to_post.channel_username}', callback_data='context_keyboard:post')
 
     keyboard = InlineKeyboardMarkup([[button_delete, button_publish],
                                     [button_store, button_switch_context]])
@@ -26,3 +26,10 @@ def change_channel_context_keyboard(channels, back_to=''):
             for c in channels
         ]
     return InlineKeyboardMarkup([[btn] for btn in switch_channel_keyboard])
+
+def default_settings_keyboard(user):
+    button_contexts = InlineKeyboardButton(text=f'📚 Контекст | @{user.current_channel.channel_username}', callback_data='context_keyboard:defaults')
+    button_close = InlineKeyboardButton(text='❌ Закрыть', callback_data='delete')
+    keyboard = InlineKeyboardMarkup([[button_contexts],
+                                    [button_close]])
+    return keyboard

@@ -4,15 +4,21 @@ from telegram.ext import    CommandHandler, \
                             InlineQueryHandler
 from telegram.ext.filters import Filters
 from telegram.error import BadRequest
-from core.keyboards import post_keyboard, rating_keyboard, change_channel_context_keyboard
+from core.keyboards import post_keyboard, rating_keyboard, change_channel_context_keyboard, default_settings_keyboard
 from core import database as db
 from core.handler_decorators import callback, delete, add_user
-import uuid
+from core.common import publish_post
 
+@delete
 def start(update, context):
-    update.message.reply_text("Hi")
     db.add_admin_user(update.message.from_user.id, update.message.from_user.username, user_type='admin')
 
+@delete
+def defaults(update, context):
+    message = update.message
+    text = 'Настройки по умолчанию'
+    user = db.get_admin_user(message.from_user.id)
+    message.reply_text(text=text, reply_markup=default_settings_keyboard(user))
 
 def add_channel(update, context):
     message = update.message
@@ -24,6 +30,7 @@ def add_channel(update, context):
             channel_id = f'@{channel_id.split("https://t.me/")[1]}' #t.me/tech_mode
     except:
         message.reply_text('Канал не указан')
+        return False
     try:
         new_channel = context.bot.get_chat(channel_id)
     except BadRequest:
@@ -49,7 +56,21 @@ def process_text_message(update, context):
 @delete
 def process_photo_message(update, context):
     message = update.message
-    message.reply_photo(photo=message.photo[0], reply_markup=post_keyboard())
+    user = db.get_admin_user(message.from_user.id)
+    print(message.photo)
+    message.reply_photo(photo=message.photo[0], reply_markup=post_keyboard(user.current_channel))
+
+@delete
+def process_video_message(update, context):
+    message = update.message
+    user = db.get_admin_user(message.from_user.id)
+    message.reply_video(video=message.video, reply_markup=post_keyboard(user.current_channel))
+
+@delete
+def process_document_message(update, context):
+    message = update.message
+    user = db.get_admin_user(message.from_user.id)
+    message.reply_document(document=message.document, reply_markup=post_keyboard(user.current_channel))
 
 @callback
 @delete
@@ -68,22 +89,21 @@ def publish_callback(update, context):
     if not user.channel_allowed(publish_to):
         message.reply_text('Вы не можете публиковать в этот контекст')
         return False
-
-    if message.text:
-        context.bot.send_message(chat_id=publish_to, text=message.text, reply_markup=rating_keyboard(message_id=message.message_id))
-        db.add_post(message.message_id, publish_to)
-    elif message.photo:
-        context.bot.send_photo(chat_id=publish_to, photo=message.photo[0], reply_markup=rating_keyboard(message_id=message.message_id))
-        db.add_post(message.message_id, publish_to)
+    publish_post(context.bot, publish_to, message)
+    db.add_post(message.message_id, publish_to)
 
 @callback
 def switch_context_callback(update, context, callback={}):
     query = update.callback_query
     message = query.message
     _, callback['switch_to'], callback['back_to'] = update.callback_query.data.split(':')
-    switched_channel = db.get_channel(int(callback['switch_to']))
     if callback['back_to'] == 'post':
+        switched_channel = db.get_channel(int(callback['switch_to']))
         message.edit_reply_markup(reply_markup=post_keyboard(switched_channel))
+    elif callback['back_to'] == 'defaults':
+        user = db.get_admin_user(query.from_user.id)
+        user.change_channel_context(int(callback['switch_to']))
+        message.edit_reply_markup(reply_markup=default_settings_keyboard(user))
 
 @callback
 def edit_markup_switch_context_callback(update, context):
@@ -101,6 +121,7 @@ def rating_process_callback(update, context):
     rating_parts = update.callback_query.data.split(':')
     rating_action = rating_parts[0]
     callback_message_id = rating_parts[1]
+    print(callback_message_id)
     callback_user = update.callback_query.from_user
     post = db.get_post(callback_message_id, message.chat.id)
     if callback_message_id != message.message_id:
@@ -132,8 +153,11 @@ def debug(message):
 all_handlers = [
     CommandHandler('start', start),
     CommandHandler('add', add_channel),
+    CommandHandler('defaults', defaults),
     MessageHandler(Filters.text, process_text_message),
     MessageHandler(Filters.photo, process_photo_message),
+    MessageHandler(Filters.video, process_video_message),
+    MessageHandler(Filters.document, process_document_message),
     CallbackQueryHandler(publish_callback, pattern='publish'),
     CallbackQueryHandler(delete_message_callback, pattern='delete'),
     CallbackQueryHandler(edit_markup_switch_context_callback, pattern='context_keyboard'),
