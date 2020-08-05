@@ -11,6 +11,7 @@ class Channel(Base):
     channel_title = Column(String(length=100))
     channel_username = Column(String(length=100))
     posts = relationship('Post', back_populates='channel')
+    delayed_posts = relationship('DelayedPost', back_populates='channel')
     users = relationship('User', back_populates='channel')
     in_user_context = relationship('AdminUser', back_populates='current_channel')
     admin_users = relationship('AdminUser', secondary=allowed_channels_association_table, back_populates='allowed_channels')

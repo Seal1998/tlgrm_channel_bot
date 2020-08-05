@@ -1,6 +1,7 @@
 from models.engine import Base, db_engine, db_session
 from models.channel import Channel
 from models.post import Post
+from models.post_delayed import DelayedPost
 from models.user import User
 from models.user_admin import AdminUser
 
@@ -43,6 +44,12 @@ def add_admin_user(user_id: int, name: str, user_type: str, allowed_channels=[])
 def add_post(post_id, channel_id):
     post = Post(channel_id=channel_id, post_id=post_id)
     add_record(post)
+
+def add_delayed_post(channel_id, text=None, photo=None, caption=None):
+    delayed_post = DelayedPost(channel_id=channel_id)
+    add_record(delayed_post)
+    if photo:
+        delayed_post.save_media(photo)
 
 def add_user(id: int, name: str, channel_id: int):
     user = User(user_id=id, username=name, channel_id=channel_id)

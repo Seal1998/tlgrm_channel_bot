@@ -1,6 +1,8 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Table, Boolean
 from sqlalchemy.orm import relationship
 from models.engine import Base, db_session
+from pathlib import Path
+import uuid
 
 class DelayedPost(Base):
     __tablename__ = 'delayed_post'
@@ -18,4 +20,9 @@ class DelayedPost(Base):
         self.has_media = True
         if type(media).__name__ == 'PhotoSize':
             self.media_photo = True
-            photo = media.get_file().download(custom_path='PROJECT DIR/delayed_posts/...')
+            path = f'{Path.cwd()}/delayed_posts/{uuid.uuid4()}'
+            self.media_path = path
+            Path(f'{Path.cwd()}/delayed_posts').mkdir(exist_ok=True)
+            photo = media.get_file()
+            photo.download(custom_path=f'{Path.cwd()}/delayed_posts/{uuid.uuid4()}')
+            db_session.commit()

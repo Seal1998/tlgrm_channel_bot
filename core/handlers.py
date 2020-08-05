@@ -58,7 +58,7 @@ def process_photo_message(update, context):
     message = update.message
     user = db.get_admin_user(message.from_user.id)
     print(message.photo)
-    message.reply_photo(photo=message.photo[0], reply_markup=post_keyboard(user.current_channel))
+    message.reply_photo(photo=message.photo[0], caption=message.caption, reply_markup=post_keyboard(user.current_channel))
 
 @delete
 def process_video_message(update, context):
@@ -91,6 +91,14 @@ def publish_callback(update, context):
         return False
     publish_post(context.bot, publish_to, message)
     db.add_post(message.message_id, publish_to)
+
+@callback
+#@delete
+def delay_message_callback(update, context):
+    query = update.callback_query
+    message = query.message
+    user = db.get_admin_user(query.from_user.id)
+    db.add_delayed_post(channel_id=user.current_channel_id, text=message.text, photo=message.photo[0], caption=message.caption)
 
 @callback
 def switch_context_callback(update, context, callback={}):
@@ -160,6 +168,7 @@ all_handlers = [
     MessageHandler(Filters.document, process_document_message),
     CallbackQueryHandler(publish_callback, pattern='publish'),
     CallbackQueryHandler(delete_message_callback, pattern='delete'),
+    CallbackQueryHandler(delay_message_callback, pattern='delay'),
     CallbackQueryHandler(edit_markup_switch_context_callback, pattern='context_keyboard'),
     CallbackQueryHandler(switch_context_callback, pattern='switch_context'),
     CallbackQueryHandler(rating_process_callback, pattern='.*rating_(up|down).*')

@@ -3,7 +3,7 @@ from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, KeyboardButton, 
 def post_keyboard(channel_to_post):
     button_publish = InlineKeyboardButton(text='🗒️ Опубликовать', callback_data=f'publish:{channel_to_post.channel_id}')
     button_delete = InlineKeyboardButton(text='❌ Удалить', callback_data='delete')
-    button_store = InlineKeyboardButton(text='📦 Отложить', callback_data='store')
+    button_store = InlineKeyboardButton(text='📦 Отложить', callback_data='delay')
     button_switch_context = InlineKeyboardButton(text=f'📚 Контекст | @{channel_to_post.channel_username}', callback_data='context_keyboard:post')
 
     keyboard = InlineKeyboardMarkup([[button_delete, button_publish],
