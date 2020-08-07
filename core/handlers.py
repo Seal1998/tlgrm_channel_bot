@@ -98,7 +98,10 @@ def delay_message_callback(update, context):
     query = update.callback_query
     message = query.message
     user = db.get_admin_user(query.from_user.id)
-    db.add_delayed_post(channel_id=user.current_channel_id, text=message.text, photo=message.photo[0], caption=message.caption)
+    db.add_delayed_post(channel_id=user.current_channel_id, 
+                        text=message.text if message.text else None, 
+                        photo=message.photo[0] if message.photo else None, 
+                        caption=message.caption if message.caption else None)
 
 @callback
 def switch_context_callback(update, context, callback={}):

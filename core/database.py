@@ -46,7 +46,7 @@ def add_post(post_id, channel_id):
     add_record(post)
 
 def add_delayed_post(channel_id, text=None, photo=None, caption=None):
-    delayed_post = DelayedPost(channel_id=channel_id)
+    delayed_post = DelayedPost(channel_id=channel_id, text=text)
     add_record(delayed_post)
     if photo:
         delayed_post.save_media(photo)

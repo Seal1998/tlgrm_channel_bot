@@ -14,6 +14,7 @@ class DelayedPost(Base):
     text = Column(String)
     has_media = Column(Boolean, default=False)
     media_photo = Column(Boolean, default=False)
+    media_video = Column(Boolean, default=False)
     media_path = Column(String)
 
     def save_media(self, media):
@@ -26,3 +27,7 @@ class DelayedPost(Base):
             photo = media.get_file()
             photo.download(custom_path=f'{Path.cwd()}/delayed_posts/{uuid.uuid4()}')
             db_session.commit()
+
+    def get_media(self):
+        byte_file = open(f'{self.media_path}', 'rb')
+        return byte_file
